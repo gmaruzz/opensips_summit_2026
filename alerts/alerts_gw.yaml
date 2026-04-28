@@ -1,0 +1,77 @@
+# Per-gateway (GW) band-breach alerts.
+#
+# `sum by (gateway)` preserves the gateway dimension so one alert
+# instance fires per breaching trunk. Timing and grouping are set
+# in policies.yaml.
+
+apiVersion: 1
+groups:
+
+  - orgId: 1
+    name: GW_Quality
+    interval: 1m
+    rules:
+
+      - uid: gw-asr-degraded
+        title: GatewayASRDegraded
+        condition: C
+        noDataState: OK
+        execErrState: Alerting
+        for: 3m
+        isPaused: false
+        labels:
+          severity: warning
+          scope: gw
+          anomaly_name: gw_asr
+        annotations:
+          summary: "Gateway ASR below adaptive lower band"
+          description: "ASR for this gateway has been significantly below its lower adaptive band for >=3m, while the gateway was carrying meaningful traffic. Check carrier health and recent routing changes for this trunk."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: ff0jhwc3z0sn4e
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: |
+                sum by (gateway) (
+                  anomaly:level_2m{anomaly_name="gw_asr"}
+                    < bool (
+                        anomaly:lower_band{anomaly_name="gw_asr", anomaly_strategy="adaptive"}
+                        - 0.10 * (
+                            anomaly:upper_band{anomaly_name="gw_asr", anomaly_strategy="adaptive"}
+                            - anomaly:lower_band{anomaly_name="gw_asr", anomaly_strategy="adaptive"}
+                          )
+                      )
+                )
+                * on(gateway)
+                sum by (gateway) (
+                  max_over_time(anomaly:requests:gw_cps[15m]) > bool 0.5
+                )
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource: { type: __expr__, uid: "-100" }
+              conditions: []
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource: { type: __expr__, uid: "-100" }
+              conditions:
+                - type: query
+                  evaluator: { type: gt, params: [0] }
+                  operator: { type: and }
+                  query: { params: [B] }
+                  reducer: { type: last, params: [] }

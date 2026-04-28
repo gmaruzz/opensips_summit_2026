@@ -1,0 +1,1194 @@
+###############################################################################
+# VoIP Anomaly Detection Inputs -- PRODUCTION                                #
+#                                                                             #
+# Tags all platform metrics for the promql-anomaly-detection framework.       #
+# Requires: adaptive.yml and robust.yml in the same rules directory.          #
+#                                                                             #
+# Metric naming: opensips_{GL|GW|CU|RU|AS}_{entity}_{metric_name}            #
+# Entity is embedded in __name__; label_replace extracts it for per-entity    #
+# anomaly bands.                                                              #
+#                                                                             #
+# Prometheus 3.x fix: per-entity rules use a two-step pattern --              #
+#   1) Helper rule: sum by(entity)(label_replace(raw_counter, ...))           #
+#   2) Anomaly rule: rate(helper[5m]) with anomaly labels                     #
+# This avoids "vector cannot contain metrics with the same labelset" errors   #
+# caused by label_replace() inside rate() on regex-matched metrics.           #
+#                                                                             #
+# Prometheus jobs: opensips (VIP 10.0.205.161:8888), rtpengine (10 instances  #
+# on port 3344), prometheus (node_exporter on all nodes).                     #
+###############################################################################
+
+groups:
+
+  ##############################################################################
+  #  PLATFORM-LEVEL (GL) -- Adaptive strategy                                  #
+  #  Smooth ratio and quality metrics that follow daily patterns               #
+  ##############################################################################
+
+  - name: AnomalyPlatformAdaptive
+    rules:
+
+      # ASR -- Answer Seizure Ratio (normal 20-35% for predictive dialing)
+      - record: anomaly:requests:gl_asr
+        expr: |-
+          rate(opensips_GL_kpi_asr_ok{job="opensips"}[5m])
+          / clamp_min(rate(opensips_GL_kpi_asr_total{job="opensips"}[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "gl_asr"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # NER -- Network Effectiveness Ratio
+      # GL formula: (funnel_ingested - cdr_no_more_gws) / funnel_ingested * 100
+      # Only "no gateway available" events reduce NER at platform level.
+      - record: anomaly:requests:gl_ner
+        expr: |-
+          clamp(
+            (rate(opensips_GL_funnel_ingested{job="opensips"}[5m])
+             - rate(opensips_GL_cdr_no_more_gws{job="opensips"}[5m]))
+            / clamp_min(rate(opensips_GL_funnel_ingested{job="opensips"}[5m]), 0.001)
+            * 100,
+          0, 100)
+        labels:
+          anomaly_name: "gl_ner"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CCR -- Call Completion Ratio
+      - record: anomaly:requests:gl_ccr
+        expr: |-
+          rate(opensips_GL_kpi_ccr_ok{job="opensips"}[5m])
+          / clamp_min(rate(opensips_GL_kpi_ccr_total{job="opensips"}[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "gl_ccr"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CDR fail ratio (normal 72-81% for predictive dialing)
+      - record: anomaly:errors:gl_cdr_fail
+        expr: |-
+          rate(opensips_GL_cdr_failed{job="opensips"}[5m])
+          / clamp_min(
+              rate(opensips_GL_cdr_success{job="opensips"}[5m])
+              + rate(opensips_GL_cdr_failed{job="opensips"}[5m]),
+            0.001)
+          * 100
+        labels:
+          anomaly_name: "gl_cdr_fail_ratio"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # MOS -- from RTPEngine exporter (primary source)
+      - record: anomaly:latency:gl_mos
+        expr: |-
+          avg(
+            rate(rtpengine_mos_total{job="rtpengine"}[5m])
+            / clamp_min(rate(rtpengine_mos_samples_total{job="rtpengine"}[5m]), 0.001)
+          )
+        labels:
+          anomaly_name: "gl_mos"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # Jitter -- from RTPEngine exporter
+      - record: anomaly:latency:gl_jitter
+        expr: |-
+          avg(
+            rate(rtpengine_jitter_total{job="rtpengine"}[5m])
+            / clamp_min(rate(rtpengine_jitter_samples_total{job="rtpengine"}[5m]), 0.001)
+          )
+        labels:
+          anomaly_name: "gl_jitter"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # Packet loss -- from RTPEngine exporter
+      - record: anomaly:latency:gl_packetloss
+        expr: |-
+          avg(
+            rate(rtpengine_packetloss_total{job="rtpengine"}[5m])
+            / clamp_min(rate(rtpengine_packetloss_samples_total{job="rtpengine"}[5m]), 0.001)
+          )
+        labels:
+          anomaly_name: "gl_packetloss"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # GW hard failure ratio
+      - record: anomaly:errors:gl_gw_hard_fail
+        expr: |-
+          rate(opensips_GL_gwatt_ko_endcall{job="opensips"}[5m])
+          / clamp_min(rate(opensips_GL_gwatt_real{job="opensips"}[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "gl_gw_hard_fail"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # No-GW ratio
+      - record: anomaly:errors:gl_no_gw
+        expr: |-
+          rate(opensips_GL_cdr_no_more_gws{job="opensips"}[5m])
+          / clamp_min(
+              rate(opensips_GL_cdr_success{job="opensips"}[5m])
+              + rate(opensips_GL_cdr_failed{job="opensips"}[5m]),
+            0.001)
+          * 100
+        labels:
+          anomaly_name: "gl_no_gw_ratio"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # ACD -- Average Call Duration (seconds)
+      - record: anomaly:latency:gl_acd
+        expr: |-
+          rate(opensips_GL_kpi_acd_sum{job="opensips"}[5m])
+          / clamp_min(rate(opensips_GL_kpi_acd_count{job="opensips"}[5m]), 0.001)
+        labels:
+          anomaly_name: "gl_acd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # ABD -- Average Billed Duration (seconds, revenue metric)
+      - record: anomaly:latency:gl_abd
+        expr: |-
+          rate(opensips_GL_kpi_abd_sum{job="opensips"}[5m])
+          / clamp_min(rate(opensips_GL_kpi_abd_count{job="opensips"}[5m]), 0.001)
+        labels:
+          anomaly_name: "gl_abd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # PDD -- Post Dial Delay (ms)
+      - record: anomaly:latency:gl_pdd
+        expr: |-
+          rate(opensips_GL_kpi_pdd_sum{job="opensips"}[5m])
+          / clamp_min(rate(opensips_GL_kpi_pdd_count{job="opensips"}[5m]), 0.001)
+        labels:
+          anomaly_name: "gl_pdd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # ATS -- Average Time to Setup (seconds)
+      - record: anomaly:latency:gl_ats
+        expr: |-
+          rate(opensips_GL_kpi_ats_sum{job="opensips"}[5m])
+          / clamp_min(rate(opensips_GL_kpi_ats_count{job="opensips"}[5m]), 0.001)
+        labels:
+          anomaly_name: "gl_ats"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # AST -- Answer Setup Time (ms)
+      - record: anomaly:latency:gl_ast
+        expr: |-
+          rate(opensips_GL_kpi_ast_sum{job="opensips"}[5m])
+          / clamp_min(rate(opensips_GL_kpi_ast_count{job="opensips"}[5m]), 0.001)
+        labels:
+          anomaly_name: "gl_ast"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # GW 503 rate (carrier overload indicator)
+      - record: anomaly:errors:gl_gw_503
+        expr: |-
+          rate(opensips_GL_gwerr_503{job="opensips"}[5m])
+        labels:
+          anomaly_name: "gl_gw_503_rate"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  PLATFORM-LEVEL (GL) -- Robust strategy                                    #
+  #  Bursty traffic and capacity metrics                                       #
+  ##############################################################################
+
+  - name: AnomalyPlatformRobust
+    rules:
+
+      # CPS -- calls per second (bursty)
+      - record: anomaly:requests:gl_cps
+        expr: |-
+          rate(opensips_GL_funnel_ingested{job="opensips"}[5m])
+        labels:
+          anomaly_name: "gl_cps"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CC inbound -- concurrent calls (bursty gauge)
+      - record: anomaly:resource:gl_cc_inbound
+        expr: |-
+          opensips_active_dialogs{job="opensips"}
+        labels:
+          anomaly_name: "gl_cc_inbound"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+      # GW capacity block ratio (can spike)
+      - record: anomaly:errors:gl_gw_block
+        expr: |-
+          rate(opensips_GL_gwatt_fake_all{job="opensips"}[5m])
+          / clamp_min(rate(opensips_GL_gwatt_all{job="opensips"}[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "gl_gw_block_ratio"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # CPS answered -- answered calls per second (bursty)
+      - record: anomaly:requests:gl_cps_answered
+        expr: |-
+          rate(opensips_GL_cdr_success{job="opensips"}[5m])
+        labels:
+          anomaly_name: "gl_cps_answered"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CPS GW attempts -- outbound gateway attempts per second (bursty)
+      - record: anomaly:requests:gl_cps_gwatt
+        expr: |-
+          rate(opensips_GL_gwatt_real{job="opensips"}[5m])
+        labels:
+          anomaly_name: "gl_cps_gwatt"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CC connected -- currently answered calls (bursty gauge)
+      - record: anomaly:resource:gl_cc_connected
+        expr: |-
+          opensips_GL_cc_connected{job="opensips"}
+        labels:
+          anomaly_name: "gl_cc_connected"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+      # CC trying -- calls in setup, not yet answered (derived gauge)
+      - record: anomaly:resource:gl_cc_trying
+        expr: |-
+          opensips_GL_cc_outbound{job="opensips"} - opensips_GL_cc_connected{job="opensips"}
+        labels:
+          anomaly_name: "gl_cc_trying"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+      # Error count rate (aggregate, uses existing plat:err_count_total recording rule)
+      - record: anomaly:errors:gl_errors
+        expr: |-
+          rate(plat:err_count_total[5m])
+        labels:
+          anomaly_name: "gl_error_rate"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  PER-GATEWAY (GW) -- Helper rules                                          #
+  #  Extract gateway label from flat metric names via label_replace + sum      #
+  ##############################################################################
+
+  - name: VoIPHelperGW
+    rules:
+
+      # --- Ratio KPI counters ---
+      - record: voip:gw:kpi_asr_ok
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_asr_ok", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_asr_ok"))
+      - record: voip:gw:kpi_asr_total
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_asr_total", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_asr_total"))
+
+      - record: voip:gw:kpi_ner_ok
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_ner_ok", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_ner_ok"))
+      - record: voip:gw:kpi_ner_total
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_ner_total", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_ner_total"))
+
+      - record: voip:gw:kpi_ccr_ok
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_ccr_ok", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_ccr_ok"))
+      - record: voip:gw:kpi_ccr_total
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_ccr_total", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_ccr_total"))
+
+      # --- CDR counters ---
+      - record: voip:gw:cdr_success
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_cdr_success", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_cdr_success"))
+      - record: voip:gw:cdr_failed
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_cdr_failed", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_cdr_failed"))
+
+      # --- Sum/count latency KPI counters ---
+      - record: voip:gw:kpi_acd_sum
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_acd_sum", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_acd_sum"))
+      - record: voip:gw:kpi_acd_count
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_acd_count", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_acd_count"))
+
+      - record: voip:gw:kpi_abd_sum
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_abd_sum", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_abd_sum"))
+      - record: voip:gw:kpi_abd_count
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_abd_count", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_abd_count"))
+
+      - record: voip:gw:kpi_pdd_sum
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_pdd_sum", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_pdd_sum"))
+      - record: voip:gw:kpi_pdd_count
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_pdd_count", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_pdd_count"))
+
+      - record: voip:gw:kpi_ats_sum
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_ats_sum", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_ats_sum"))
+      - record: voip:gw:kpi_ats_count
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_ats_count", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_ats_count"))
+
+      - record: voip:gw:kpi_ast_sum
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_ast_sum", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_ast_sum"))
+      - record: voip:gw:kpi_ast_count
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_kpi_ast_count", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_kpi_ast_count"))
+
+      # --- MOS counters (stored in tenths) ---
+      - record: voip:gw:mos_gw_good_sum
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_mos_gw_good_sum", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_mos_gw_good_sum"))
+      - record: voip:gw:mos_gw_good_count
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_mos_gw_good_count", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_mos_gw_good_count"))
+
+      # --- GW attempt and error counters ---
+      - record: voip:gw:gwatt_real
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_gwatt_real", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_gwatt_real"))
+      - record: voip:gw:gwatt_ko_endcall
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_gwatt_ko_endcall", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_gwatt_ko_endcall"))
+      - record: voip:gw:gwerr_408
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_gwerr_408", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_gwerr_408"))
+      - record: voip:gw:gwerr_503
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_gwerr_503", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_gwerr_503"))
+      - record: voip:gw:gwatt_fake_all
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_gwatt_fake_all", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_gwatt_fake_all"))
+      - record: voip:gw:gwatt_all
+        expr: sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_gwatt_all", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_gwatt_all"))
+
+  ##############################################################################
+  #  PER-GATEWAY (GW) -- Adaptive strategy                                     #
+  ##############################################################################
+
+  - name: AnomalyPerGatewayAdaptive
+    rules:
+
+      # ASR per gateway
+      - record: anomaly:requests:gw_asr
+        expr: |-
+          rate(voip:gw:kpi_asr_ok[5m])
+          / clamp_min(rate(voip:gw:kpi_asr_total[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "gw_asr"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # NER per gateway: (gwatt_real - gwerr_503) / gwatt_real * 100
+      # Matches the dashboard formula: only 503 (carrier overload) reduces NER.
+      - record: anomaly:requests:gw_ner
+        expr: |-
+          clamp(
+            (rate(voip:gw:gwatt_real[5m]) - rate(voip:gw:gwerr_503[5m]))
+            / clamp_min(rate(voip:gw:gwatt_real[5m]), 0.001)
+            * 100,
+          0, 100)
+        labels:
+          anomaly_name: "gw_ner"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CCR per gateway
+      - record: anomaly:requests:gw_ccr
+        expr: |-
+          rate(voip:gw:kpi_ccr_ok[5m])
+          / clamp_min(rate(voip:gw:kpi_ccr_total[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "gw_ccr"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CDR fail ratio per gateway
+      - record: anomaly:errors:gw_cdr_fail
+        expr: |-
+          rate(voip:gw:cdr_failed[5m])
+          / clamp_min(rate(voip:gw:cdr_success[5m]) + rate(voip:gw:cdr_failed[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "gw_cdr_fail_ratio"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # ACD per gateway (seconds)
+      - record: anomaly:latency:gw_acd
+        expr: |-
+          rate(voip:gw:kpi_acd_sum[5m])
+          / clamp_min(rate(voip:gw:kpi_acd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "gw_acd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # ABD per gateway (seconds)
+      - record: anomaly:latency:gw_abd
+        expr: |-
+          rate(voip:gw:kpi_abd_sum[5m])
+          / clamp_min(rate(voip:gw:kpi_abd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "gw_abd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # PDD per gateway (ms)
+      - record: anomaly:latency:gw_pdd
+        expr: |-
+          rate(voip:gw:kpi_pdd_sum[5m])
+          / clamp_min(rate(voip:gw:kpi_pdd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "gw_pdd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # ATS per gateway (seconds)
+      - record: anomaly:latency:gw_ats
+        expr: |-
+          rate(voip:gw:kpi_ats_sum[5m])
+          / clamp_min(rate(voip:gw:kpi_ats_count[5m]), 0.001)
+        labels:
+          anomaly_name: "gw_ats"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # AST per gateway (ms)
+      - record: anomaly:latency:gw_ast
+        expr: |-
+          rate(voip:gw:kpi_ast_sum[5m])
+          / clamp_min(rate(voip:gw:kpi_ast_count[5m]), 0.001)
+        labels:
+          anomaly_name: "gw_ast"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # MOS per gateway (from OpenSIPS GW-level counters; stored in tenths)
+      - record: anomaly:latency:gw_mos
+        expr: |-
+          rate(voip:gw:mos_gw_good_sum[5m])
+          / clamp_min(rate(voip:gw:mos_gw_good_count[5m]), 0.001)
+          / 10
+        labels:
+          anomaly_name: "gw_mos"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # GW hard failure ratio per gateway
+      - record: anomaly:errors:gw_hard_fail
+        expr: |-
+          rate(voip:gw:gwatt_ko_endcall[5m])
+          / clamp_min(rate(voip:gw:gwatt_real[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "gw_hard_fail_ratio"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # GW 408 timeout rate per gateway
+      - record: anomaly:errors:gw_408
+        expr: |-
+          rate(voip:gw:gwerr_408[5m])
+        labels:
+          anomaly_name: "gw_408_rate"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # GW 503 overload rate per gateway
+      - record: anomaly:errors:gw_503
+        expr: |-
+          rate(voip:gw:gwerr_503[5m])
+        labels:
+          anomaly_name: "gw_503_rate"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  PER-GATEWAY (GW) -- Robust strategy                                       #
+  ##############################################################################
+
+  - name: AnomalyPerGatewayRobust
+    rules:
+
+      # CPS per gateway (outbound attempts)
+      - record: anomaly:requests:gw_cps
+        expr: |-
+          rate(voip:gw:gwatt_real[5m])
+        labels:
+          anomaly_name: "gw_cps"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CC per gateway (outbound concurrent -- gauge, single step)
+      - record: anomaly:resource:gw_cc
+        expr: |-
+          sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_cc_outbound", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_cc_outbound"))
+        labels:
+          anomaly_name: "gw_cc_outbound"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+      # CPS answered per gateway (from cdr_success helper)
+      - record: anomaly:requests:gw_cps_answered
+        expr: |-
+          rate(voip:gw:cdr_success[5m])
+        labels:
+          anomaly_name: "gw_cps_answered"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CC connected per gateway (answered calls gauge)
+      - record: anomaly:resource:gw_cc_connected
+        expr: |-
+          sum by(gateway) (label_replace({__name__=~"opensips_GW_.+_cc_connected", job="opensips"}, "gateway", "$1", "__name__", "opensips_GW_(.+)_cc_connected"))
+        labels:
+          anomaly_name: "gw_cc_connected"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+      # GW capacity block ratio per gateway
+      - record: anomaly:errors:gw_block
+        expr: |-
+          rate(voip:gw:gwatt_fake_all[5m])
+          / clamp_min(rate(voip:gw:gwatt_all[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "gw_block_ratio"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  PER-CUSTOMER (CU) -- Helper rules                                         #
+  ##############################################################################
+
+  - name: VoIPHelperCU
+    rules:
+
+      # --- Ratio KPI counters ---
+      - record: voip:cu:kpi_asr_ok
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_asr_ok", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_asr_ok"))
+      - record: voip:cu:kpi_asr_total
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_asr_total", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_asr_total"))
+
+      - record: voip:cu:kpi_ner_ok
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_ner_ok", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_ner_ok"))
+      - record: voip:cu:kpi_ner_total
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_ner_total", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_ner_total"))
+
+      - record: voip:cu:kpi_ccr_ok
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_ccr_ok", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_ccr_ok"))
+      - record: voip:cu:kpi_ccr_total
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_ccr_total", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_ccr_total"))
+
+      # --- CDR counters ---
+      - record: voip:cu:cdr_success
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_cdr_success", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_cdr_success"))
+      - record: voip:cu:cdr_failed
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_cdr_failed", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_cdr_failed"))
+
+      # --- Sum/count latency KPI counters ---
+      - record: voip:cu:kpi_acd_sum
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_acd_sum", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_acd_sum"))
+      - record: voip:cu:kpi_acd_count
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_acd_count", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_acd_count"))
+
+      - record: voip:cu:kpi_abd_sum
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_abd_sum", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_abd_sum"))
+      - record: voip:cu:kpi_abd_count
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_abd_count", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_abd_count"))
+
+      - record: voip:cu:kpi_pdd_sum
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_pdd_sum", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_pdd_sum"))
+      - record: voip:cu:kpi_pdd_count
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_pdd_count", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_pdd_count"))
+
+      - record: voip:cu:kpi_ats_sum
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_ats_sum", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_ats_sum"))
+      - record: voip:cu:kpi_ats_count
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_ats_count", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_ats_count"))
+
+      - record: voip:cu:kpi_ast_sum
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_ast_sum", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_ast_sum"))
+      - record: voip:cu:kpi_ast_count
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_kpi_ast_count", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_kpi_ast_count"))
+
+      # --- MOS counters (call-level, stored in tenths) ---
+      - record: voip:cu:mos_call_good_sum
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_mos_call_good_sum", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_mos_call_good_sum"))
+      - record: voip:cu:mos_call_good_count
+        expr: sum by(customer) (label_replace({__name__=~"opensips_CU_.+_mos_call_good_count", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_mos_call_good_count"))
+
+  ##############################################################################
+  #  PER-CUSTOMER (CU) -- Adaptive strategy                                    #
+  ##############################################################################
+
+  - name: AnomalyPerCustomerAdaptive
+    rules:
+
+      # ASR per customer
+      - record: anomaly:requests:cu_asr
+        expr: |-
+          rate(voip:cu:kpi_asr_ok[5m])
+          / clamp_min(rate(voip:cu:kpi_asr_total[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "cu_asr"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # NER per customer
+      - record: anomaly:requests:cu_ner
+        expr: |-
+          rate(voip:cu:kpi_ner_ok[5m])
+          / clamp_min(rate(voip:cu:kpi_ner_total[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "cu_ner"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CCR per customer
+      - record: anomaly:requests:cu_ccr
+        expr: |-
+          rate(voip:cu:kpi_ccr_ok[5m])
+          / clamp_min(rate(voip:cu:kpi_ccr_total[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "cu_ccr"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CDR fail ratio per customer
+      - record: anomaly:errors:cu_cdr_fail
+        expr: |-
+          rate(voip:cu:cdr_failed[5m])
+          / clamp_min(rate(voip:cu:cdr_success[5m]) + rate(voip:cu:cdr_failed[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "cu_cdr_fail_ratio"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # ACD per customer (seconds)
+      - record: anomaly:latency:cu_acd
+        expr: |-
+          rate(voip:cu:kpi_acd_sum[5m])
+          / clamp_min(rate(voip:cu:kpi_acd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "cu_acd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # ABD per customer (seconds, billing metric)
+      - record: anomaly:latency:cu_abd
+        expr: |-
+          rate(voip:cu:kpi_abd_sum[5m])
+          / clamp_min(rate(voip:cu:kpi_abd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "cu_abd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # PDD per customer (ms)
+      - record: anomaly:latency:cu_pdd
+        expr: |-
+          rate(voip:cu:kpi_pdd_sum[5m])
+          / clamp_min(rate(voip:cu:kpi_pdd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "cu_pdd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # ATS per customer (seconds)
+      - record: anomaly:latency:cu_ats
+        expr: |-
+          rate(voip:cu:kpi_ats_sum[5m])
+          / clamp_min(rate(voip:cu:kpi_ats_count[5m]), 0.001)
+        labels:
+          anomaly_name: "cu_ats"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # AST per customer (ms)
+      - record: anomaly:latency:cu_ast
+        expr: |-
+          rate(voip:cu:kpi_ast_sum[5m])
+          / clamp_min(rate(voip:cu:kpi_ast_count[5m]), 0.001)
+        labels:
+          anomaly_name: "cu_ast"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # MOS per customer (from OpenSIPS, stored in tenths)
+      - record: anomaly:latency:cu_mos
+        expr: |-
+          rate(voip:cu:mos_call_good_sum[5m])
+          / clamp_min(rate(voip:cu:mos_call_good_count[5m]), 0.001)
+          / 10
+        labels:
+          anomaly_name: "cu_mos"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  PER-CUSTOMER (CU) -- Robust strategy                                      #
+  ##############################################################################
+
+  - name: AnomalyPerCustomerRobust
+    rules:
+
+      # CPS per customer (answered -- rate of cdr_success)
+      - record: anomaly:requests:cu_cps
+        expr: |-
+          rate(voip:cu:cdr_success[5m])
+        labels:
+          anomaly_name: "cu_cps"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CPS attempts per customer (rate of kpi_asr_total -- every attempt)
+      - record: anomaly:requests:cu_cps_attempts
+        expr: |-
+          rate(voip:cu:kpi_asr_total[5m])
+        labels:
+          anomaly_name: "cu_cps_attempts"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CC inbound per customer (gauge, single step)
+      - record: anomaly:resource:cu_cc
+        expr: |-
+          sum by(customer) (label_replace({__name__=~"opensips_CU_.+_cc_inbound", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_cc_inbound"))
+        labels:
+          anomaly_name: "cu_cc_inbound"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+      # CC connected per customer (answered legs -- for the 'Connected' timeseries)
+      - record: anomaly:resource:cu_cc_connected
+        expr: |-
+          sum by(customer) (label_replace({__name__=~"opensips_CU_.+_cc_connected", job="opensips"}, "customer", "$1", "__name__", "opensips_CU_(.+)_cc_connected"))
+        labels:
+          anomaly_name: "cu_cc_connected"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  PER-ROUTE (RU) -- Helper rules                                            #
+  ##############################################################################
+
+  - name: VoIPHelperRU
+    rules:
+
+      # --- Ratio KPI counters ---
+      - record: voip:ru:kpi_asr_ok
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_asr_ok", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_asr_ok"))
+      - record: voip:ru:kpi_asr_total
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_asr_total", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_asr_total"))
+
+      - record: voip:ru:kpi_ner_ok
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_ner_ok", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_ner_ok"))
+      - record: voip:ru:kpi_ner_total
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_ner_total", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_ner_total"))
+
+      - record: voip:ru:kpi_ccr_ok
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_ccr_ok", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_ccr_ok"))
+      - record: voip:ru:kpi_ccr_total
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_ccr_total", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_ccr_total"))
+
+      # --- CDR counters ---
+      - record: voip:ru:cdr_success
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_cdr_success", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_cdr_success"))
+      - record: voip:ru:cdr_failed
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_cdr_failed", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_cdr_failed"))
+
+      # --- Sum/count latency KPI counters ---
+      - record: voip:ru:kpi_acd_sum
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_acd_sum", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_acd_sum"))
+      - record: voip:ru:kpi_acd_count
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_acd_count", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_acd_count"))
+
+      - record: voip:ru:kpi_pdd_sum
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_pdd_sum", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_pdd_sum"))
+      - record: voip:ru:kpi_pdd_count
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_pdd_count", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_pdd_count"))
+
+      - record: voip:ru:kpi_abd_sum
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_abd_sum", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_abd_sum"))
+      - record: voip:ru:kpi_abd_count
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_kpi_abd_count", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_kpi_abd_count"))
+
+      # --- MOS counters (call-level, stored in tenths) ---
+      - record: voip:ru:mos_call_good_sum
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_mos_call_good_sum", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_mos_call_good_sum"))
+      - record: voip:ru:mos_call_good_count
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_mos_call_good_count", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_mos_call_good_count"))
+
+      # --- GW attempt + failure counters ---
+      - record: voip:ru:gwatt_real
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_gwatt_real", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_gwatt_real"))
+      - record: voip:ru:gwatt_ko_endcall
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_gwatt_ko_endcall", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_gwatt_ko_endcall"))
+      - record: voip:ru:gwatt_fake_all
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_gwatt_fake_all", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_gwatt_fake_all"))
+      - record: voip:ru:gwatt_all
+        expr: sum by(route) (label_replace({__name__=~"opensips_RU_.+_gwatt_all", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_gwatt_all"))
+
+  ##############################################################################
+  #  PER-ROUTE (RU) -- Adaptive strategy                                       #
+  ##############################################################################
+
+  - name: AnomalyPerRouteAdaptive
+    rules:
+
+      # ASR per route
+      - record: anomaly:requests:ru_asr
+        expr: |-
+          rate(voip:ru:kpi_asr_ok[5m])
+          / clamp_min(rate(voip:ru:kpi_asr_total[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "ru_asr"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # NER per route
+      - record: anomaly:requests:ru_ner
+        expr: |-
+          rate(voip:ru:kpi_ner_ok[5m])
+          / clamp_min(rate(voip:ru:kpi_ner_total[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "ru_ner"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CCR per route
+      - record: anomaly:requests:ru_ccr
+        expr: |-
+          rate(voip:ru:kpi_ccr_ok[5m])
+          / clamp_min(rate(voip:ru:kpi_ccr_total[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "ru_ccr"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CDR fail ratio per route
+      - record: anomaly:errors:ru_cdr_fail
+        expr: |-
+          rate(voip:ru:cdr_failed[5m])
+          / clamp_min(rate(voip:ru:cdr_success[5m]) + rate(voip:ru:cdr_failed[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "ru_cdr_fail_ratio"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # ACD per route
+      - record: anomaly:latency:ru_acd
+        expr: |-
+          rate(voip:ru:kpi_acd_sum[5m])
+          / clamp_min(rate(voip:ru:kpi_acd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "ru_acd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # PDD per route (ms)
+      - record: anomaly:latency:ru_pdd
+        expr: |-
+          rate(voip:ru:kpi_pdd_sum[5m])
+          / clamp_min(rate(voip:ru:kpi_pdd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "ru_pdd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # ABD per route (seconds)
+      - record: anomaly:latency:ru_abd
+        expr: |-
+          rate(voip:ru:kpi_abd_sum[5m])
+          / clamp_min(rate(voip:ru:kpi_abd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "ru_abd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # MOS per route (from OpenSIPS, stored in tenths)
+      - record: anomaly:latency:ru_mos
+        expr: |-
+          rate(voip:ru:mos_call_good_sum[5m])
+          / clamp_min(rate(voip:ru:mos_call_good_count[5m]), 0.001)
+          / 10
+        labels:
+          anomaly_name: "ru_mos"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  PER-ROUTE (RU) -- Robust strategy                                         #
+  ##############################################################################
+
+  - name: AnomalyPerRouteRobust
+    rules:
+
+      # CPS per route (attempts -- rate of gwatt_real)
+      - record: anomaly:requests:ru_cps
+        expr: |-
+          rate(voip:ru:gwatt_real[5m])
+        labels:
+          anomaly_name: "ru_cps"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CPS answered per route (rate of cdr_success -- for the 'CPS Answered' line)
+      - record: anomaly:requests:ru_cps_answered
+        expr: |-
+          rate(voip:ru:cdr_success[5m])
+        labels:
+          anomaly_name: "ru_cps_answered"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CC outbound per route (gauge, for the 'CC Outbound' line)
+      - record: anomaly:resource:ru_cc_outbound
+        expr: |-
+          sum by(route) (label_replace({__name__=~"opensips_RU_.+_cc_outbound", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_cc_outbound"))
+        labels:
+          anomaly_name: "ru_cc_outbound"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+      # CC connected per route (gauge, for the 'CC Connected' line)
+      - record: anomaly:resource:ru_cc_connected
+        expr: |-
+          sum by(route) (label_replace({__name__=~"opensips_RU_.+_cc_connected", job="opensips"}, "route", "$1", "__name__", "opensips_RU_(.+)_cc_connected"))
+        labels:
+          anomaly_name: "ru_cc_connected"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  PER-FS-NODE (AS) -- Helper rules                                          #
+  #  AS entities are IPs with dots as underscores (e.g. 116_202_78_44)         #
+  ##############################################################################
+
+  - name: VoIPHelperAS
+    rules:
+
+      # --- Ratio KPI counters ---
+      - record: voip:as:kpi_asr_ok
+        expr: sum by(fs_node) (label_replace({__name__=~"opensips_AS_.+_kpi_asr_ok", job="opensips"}, "fs_node", "$1", "__name__", "opensips_AS_(.+)_kpi_asr_ok"))
+      - record: voip:as:kpi_asr_total
+        expr: sum by(fs_node) (label_replace({__name__=~"opensips_AS_.+_kpi_asr_total", job="opensips"}, "fs_node", "$1", "__name__", "opensips_AS_(.+)_kpi_asr_total"))
+
+      - record: voip:as:kpi_ner_ok
+        expr: sum by(fs_node) (label_replace({__name__=~"opensips_AS_.+_kpi_ner_ok", job="opensips"}, "fs_node", "$1", "__name__", "opensips_AS_(.+)_kpi_ner_ok"))
+      - record: voip:as:kpi_ner_total
+        expr: sum by(fs_node) (label_replace({__name__=~"opensips_AS_.+_kpi_ner_total", job="opensips"}, "fs_node", "$1", "__name__", "opensips_AS_(.+)_kpi_ner_total"))
+
+      # --- CDR counters ---
+      - record: voip:as:cdr_success
+        expr: sum by(fs_node) (label_replace({__name__=~"opensips_AS_.+_cdr_success", job="opensips"}, "fs_node", "$1", "__name__", "opensips_AS_(.+)_cdr_success"))
+      - record: voip:as:cdr_failed
+        expr: sum by(fs_node) (label_replace({__name__=~"opensips_AS_.+_cdr_failed", job="opensips"}, "fs_node", "$1", "__name__", "opensips_AS_(.+)_cdr_failed"))
+
+      # --- Sum/count latency KPI counters ---
+      - record: voip:as:kpi_acd_sum
+        expr: sum by(fs_node) (label_replace({__name__=~"opensips_AS_.+_kpi_acd_sum", job="opensips"}, "fs_node", "$1", "__name__", "opensips_AS_(.+)_kpi_acd_sum"))
+      - record: voip:as:kpi_acd_count
+        expr: sum by(fs_node) (label_replace({__name__=~"opensips_AS_.+_kpi_acd_count", job="opensips"}, "fs_node", "$1", "__name__", "opensips_AS_(.+)_kpi_acd_count"))
+
+      - record: voip:as:kpi_pdd_sum
+        expr: sum by(fs_node) (label_replace({__name__=~"opensips_AS_.+_kpi_pdd_sum", job="opensips"}, "fs_node", "$1", "__name__", "opensips_AS_(.+)_kpi_pdd_sum"))
+      - record: voip:as:kpi_pdd_count
+        expr: sum by(fs_node) (label_replace({__name__=~"opensips_AS_.+_kpi_pdd_count", job="opensips"}, "fs_node", "$1", "__name__", "opensips_AS_(.+)_kpi_pdd_count"))
+
+  ##############################################################################
+  #  PER-FS-NODE (AS) -- Adaptive strategy                                     #
+  ##############################################################################
+
+  - name: AnomalyPerFSNodeAdaptive
+    rules:
+
+      # ASR per FreeSWITCH node
+      - record: anomaly:requests:as_asr
+        expr: |-
+          rate(voip:as:kpi_asr_ok[5m])
+          / clamp_min(rate(voip:as:kpi_asr_total[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "as_asr"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # NER per FS node
+      - record: anomaly:requests:as_ner
+        expr: |-
+          rate(voip:as:kpi_ner_ok[5m])
+          / clamp_min(rate(voip:as:kpi_ner_total[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "as_ner"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+      # CDR fail ratio per FS node
+      - record: anomaly:errors:as_cdr_fail
+        expr: |-
+          rate(voip:as:cdr_failed[5m])
+          / clamp_min(rate(voip:as:cdr_success[5m]) + rate(voip:as:cdr_failed[5m]), 0.001)
+          * 100
+        labels:
+          anomaly_name: "as_cdr_fail_ratio"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # ACD per FS node (seconds)
+      - record: anomaly:latency:as_acd
+        expr: |-
+          rate(voip:as:kpi_acd_sum[5m])
+          / clamp_min(rate(voip:as:kpi_acd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "as_acd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # PDD per FS node (ms)
+      - record: anomaly:latency:as_pdd
+        expr: |-
+          rate(voip:as:kpi_pdd_sum[5m])
+          / clamp_min(rate(voip:as:kpi_pdd_count[5m]), 0.001)
+        labels:
+          anomaly_name: "as_pdd"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  PER-FS-NODE (AS) -- Robust strategy                                       #
+  ##############################################################################
+
+  - name: AnomalyPerFSNodeRobust
+    rules:
+
+      # CPS per FS node (using cdr_success as proxy)
+      - record: anomaly:requests:as_cps
+        expr: |-
+          rate(voip:as:cdr_success[5m])
+        labels:
+          anomaly_name: "as_cps"
+          anomaly_type: "requests"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  RTPENGINE -- Per-instance metrics                                         #
+  #  10 instances on 10.0.205.8-17:3344                                        #
+  ##############################################################################
+
+  - name: AnomalyRTPEngineAdaptive
+    rules:
+
+      # MOS per RTPEngine instance
+      - record: anomaly:latency:rtpe_mos
+        expr: |-
+          rate(rtpengine_mos_total{job="rtpengine"}[5m])
+          / clamp_min(rate(rtpengine_mos_samples_total{job="rtpengine"}[5m]), 0.001)
+        labels:
+          anomaly_name: "rtpe_mos"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # Jitter per instance (ms)
+      - record: anomaly:latency:rtpe_jitter
+        expr: |-
+          rate(rtpengine_jitter_total{job="rtpengine"}[5m])
+          / clamp_min(rate(rtpengine_jitter_samples_total{job="rtpengine"}[5m]), 0.001)
+        labels:
+          anomaly_name: "rtpe_jitter"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+      # Packet loss per instance (%)
+      - record: anomaly:latency:rtpe_packetloss
+        expr: |-
+          rate(rtpengine_packetloss_total{job="rtpengine"}[5m])
+          / clamp_min(rate(rtpengine_packetloss_samples_total{job="rtpengine"}[5m]), 0.001)
+        labels:
+          anomaly_name: "rtpe_packetloss"
+          anomaly_type: "latency"
+          anomaly_strategy: "adaptive"
+
+  - name: AnomalyRTPEngineRobust
+    rules:
+
+      # Sessions per instance (bursty gauge)
+      - record: anomaly:resource:rtpe_sessions
+        expr: |-
+          rtpengine_sessions{job="rtpengine", type="own"}
+        labels:
+          anomaly_name: "rtpe_sessions"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+      # Port utilization per instance (%)
+      - record: anomaly:resource:rtpe_ports
+        expr: |-
+          rtpengine_ports_used{job="rtpengine"}
+          / clamp_min(rtpengine_ports{job="rtpengine"}, 1)
+          * 100
+        labels:
+          anomaly_name: "rtpe_port_utilization"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+  ##############################################################################
+  #  INFRASTRUCTURE -- Per-node from node_exporter                             #
+  #  job="prometheus" (non-standard label used in production)                  #
+  ##############################################################################
+
+  - name: AnomalyInfraAdaptive
+    rules:
+
+      # CPU % per node
+      - record: anomaly:resource:node_cpu
+        expr: |-
+          (1 - avg by(instance, job) (
+            irate(node_cpu_seconds_total{mode="idle", job="prometheus"}[2m])
+          )) * 100
+        labels:
+          anomaly_name: "node_cpu"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+      # RAM % per node
+      - record: anomaly:resource:node_ram
+        expr: |-
+          (1 - node_memory_MemAvailable_bytes{job="prometheus"}
+               / node_memory_MemTotal_bytes{job="prometheus"}) * 100
+        labels:
+          anomaly_name: "node_ram"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"
+
+  - name: AnomalyInfraRobust
+    rules:
+
+      # UDP buffer overflow rate per node (any non-zero is bad)
+      - record: anomaly:errors:node_udp_overflow
+        expr: |-
+          rate(node_netstat_Udp_RcvbufErrors{job="prometheus"}[5m])
+        labels:
+          anomaly_name: "node_udp_overflow"
+          anomaly_type: "errors"
+          anomaly_strategy: "adaptive"
+
+      # Network RX bytes/s per node
+      - record: anomaly:resource:node_network_rx
+        expr: |-
+          sum by(instance, job) (
+            rate(node_network_receive_bytes_total{job="prometheus", device!="lo"}[5m])
+          )
+        labels:
+          anomaly_name: "node_network_rx"
+          anomaly_type: "resource"
+          anomaly_strategy: "adaptive"

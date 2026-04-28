@@ -1,0 +1,4546 @@
+{
+  "__inputs": [
+    {
+      "description": "",
+      "label": "prometheus",
+      "name": "DS_PROMETHEUS",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus",
+      "type": "datasource"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "id": "gauge",
+      "name": "Gauge",
+      "type": "panel",
+      "version": ""
+    },
+    {
+      "id": "stat",
+      "name": "Stat",
+      "type": "panel",
+      "version": ""
+    },
+    {
+      "id": "table",
+      "name": "Table",
+      "type": "panel",
+      "version": ""
+    },
+    {
+      "id": "timeseries",
+      "name": "Time series",
+      "type": "panel",
+      "version": ""
+    },
+    {
+      "id": "grafana",
+      "name": "Grafana",
+      "type": "grafana",
+      "version": "12.2.0"
+    },
+    {
+      "id": "prometheus",
+      "name": "Prometheus",
+      "type": "datasource",
+      "version": "1.0.0"
+    }
+  ],
+  "description": "Client-facing entry point. Live KPIs (CPS, CC, ASR, NER, CCR, ACD, ABD, PDD, MOS, GW health ratios), traffic and quality trends with anomaly detection bands, platform errors, CDR outcomes, infrastructure status, and navigation to all entity dashboards.",
+  "editable": true,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "prod"
+      ],
+      "targetBlank": false,
+      "title": "Prod Dashboards",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "type": "row",
+      "id": 1,
+      "title": "LIVE SNAPSHOT",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "CC Connected",
+      "description": "Platform-wide connected (answered) calls. Always live.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#808080",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "opensips_GL_cc_connected",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "timeFrom": "5m"
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "CPS Inbound",
+      "description": "Calls per second arriving at the platform (2m rate). Always live.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#808080",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m])",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "timeFrom": "5m"
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Total Minutes",
+      "description": "Total billed minutes in last 24h. Always live.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#808080",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "increase(opensips_GL_kpi_abd_sum{job=\"opensips\"}[24h]) / 60",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "timeFrom": "24h"
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "ABD",
+      "description": "Average Billed Duration (talk time) in seconds. Always live.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#808080",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_kpi_abd_sum{job=\"opensips\"}[2m]) / clamp_min(rate(opensips_GL_kpi_abd_count{job=\"opensips\"}[2m]), 0.001)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "timeFrom": "5m"
+    },
+    {
+      "type": "stat",
+      "id": 6,
+      "title": "ACD",
+      "description": "Average Call Duration in seconds.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 15
+              },
+              {
+                "color": "green",
+                "value": 30
+              }
+            ]
+          },
+          "unit": "s",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 5
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_kpi_acd_sum{job=\"opensips\"}[2m]) / clamp_min(rate(opensips_GL_kpi_acd_count{job=\"opensips\"}[2m]), 0.001)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 7,
+      "title": "PDD",
+      "description": "Post Dial Delay in seconds.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3.5
+              },
+              {
+                "color": "red",
+                "value": 4
+              }
+            ]
+          },
+          "unit": "s",
+          "noValue": "0",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 5
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_kpi_pdd_sum{job=\"opensips\"}[2m]) / clamp_min(rate(opensips_GL_kpi_pdd_count{job=\"opensips\"}[2m]), 0.001) / 1000",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 8,
+      "title": "MOS",
+      "description": "Mean Opinion Score from RTPEngine (1.0-5.0).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 4
+              },
+              {
+                "color": "green",
+                "value": 4.2
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 5
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "avg(rate(rtpengine_mos_total{job=\"rtpengine\"}[2m]) / clamp_min(rate(rtpengine_mos_samples_total{job=\"rtpengine\"}[2m]), 0.001))",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 9,
+      "title": "NER %",
+      "description": "Network Effectiveness Ratio -- % of calls reaching subscriber.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 99
+              },
+              {
+                "color": "green",
+                "value": 99.5
+              }
+            ]
+          },
+          "unit": "percent",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 5
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "clamp((rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m]) - rate(opensips_GL_cdr_no_more_gws{job=\"opensips\"}[2m])) / clamp_min(rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m]), 0.001) * 100, 0, 100)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 10,
+      "title": "ASR %",
+      "description": "Answer Seizure Ratio -- % of calls answered.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "percent",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 5
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "clamp(rate(opensips_GL_kpi_asr_ok{job=\"opensips\"}[2m]) / clamp_min(rate(opensips_GL_kpi_asr_total{job=\"opensips\"}[2m]), 0.001) * 100, 0, 100)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 11,
+      "title": "CCR %",
+      "description": "Call Completion Ratio -- % with SIP code <= 499.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 5
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "clamp(rate(opensips_GL_kpi_ccr_ok{job=\"opensips\"}[2m]) / clamp_min(rate(opensips_GL_kpi_ccr_total{job=\"opensips\"}[2m]), 0.001) * 100, 0, 100)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 12,
+      "title": "GW Hard Fail %",
+      "description": "% of gateway attempts with fatal (non-retriable) failures.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 25
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          },
+          "unit": "percent",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 5
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "plat:gw_hard_fail_ratio",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 13,
+      "title": "GW Block %",
+      "description": "% of gateway attempts blocked by CC/CPS limits.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "red",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "percent",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 5
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "plat:gw_block_ratio",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 14,
+      "title": "CDR",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 15,
+      "title": "Successful Calls",
+      "description": "Answered calls in the selected time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 10
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "increase(opensips_GL_cdr_success{job=\"opensips\"}[$__range])",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 16,
+      "title": "Unsuccessful Calls",
+      "description": "All unanswered calls (missed + no-gateway + failed) in the selected time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 10
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "increase(opensips_GL_funnel_ingested{job=\"opensips\"}[$__range]) - increase(opensips_GL_cdr_success{job=\"opensips\"}[$__range])",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 17,
+      "title": "No Gateway",
+      "description": "Calls where all gateways were exhausted.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 10
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "increase(opensips_GL_cdr_no_more_gws{job=\"opensips\"}[$__range])",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 18,
+      "title": "Answer Rate %",
+      "description": "% of ingested calls that were answered in the selected time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "percent",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 10
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "clamp(increase(opensips_GL_cdr_success{job=\"opensips\"}[$__range]) / clamp_min(increase(opensips_GL_funnel_ingested{job=\"opensips\"}[$__range]), 1) * 100, 0, 100)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 19,
+      "title": "Errors/sec",
+      "description": "Platform error event rate (sum of all 61 error codes, 2m rate).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 10
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(plat:err_count_total[2m])",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 20,
+      "title": "Billed Minutes",
+      "description": "Total billed minutes in selected time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 10
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "increase(opensips_GL_kpi_abd_sum{job=\"opensips\"}[$__range]) / 60",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 21,
+      "title": "STATUS & LINKS",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 22,
+      "title": "OpenSIPS",
+      "description": "OpenSIPS scrape target status.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 15
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "up{job=\"opensips\"}",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 23,
+      "title": "RTPEngine UP",
+      "description": "RTPEngine instances responding.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "green",
+                "value": 4
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 15
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "count(up{job=\"rtpengine\"} == 1)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 24,
+      "title": "Cluster Nodes",
+      "description": "Cluster nodes responding to node_exporter scrape.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "green",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 15
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "count(up{job=\"prometheus\"} == 1)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 25,
+      "title": "SIP Capture",
+      "description": "Homer SIP capture agent status.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 15
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "up{job=\"homer\"}",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "id": 26,
+      "title": "Gateways",
+      "description": "Navigate to Gateways dashboard.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "links": [
+            {
+              "title": "Drill: Gateways",
+              "url": "/d/prod-51-gateways-v1?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 15
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "vector(1)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "links": []
+    },
+    {
+      "type": "stat",
+      "id": 27,
+      "title": "Customers",
+      "description": "Navigate to Customers dashboard.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "links": [
+            {
+              "title": "Drill: Customers",
+              "url": "/d/prod-52-customers-v1?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 15
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "vector(1)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "links": []
+    },
+    {
+      "type": "stat",
+      "id": 28,
+      "title": "Source IPs",
+      "description": "Navigate to Source IPs dashboard.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "links": [
+            {
+              "title": "Drill: Source IPs",
+              "url": "/d/prod-54-source-ips-v1?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 15
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "vector(1)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "links": []
+    },
+    {
+      "type": "stat",
+      "id": 29,
+      "title": "Routes",
+      "description": "Navigate to Routes dashboard.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "noValue": "0",
+          "links": [
+            {
+              "title": "Drill: Routes",
+              "url": "/d/prod-53-routes-v1?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 15
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "vector(1)",
+          "legendFormat": " ",
+          "refId": "A",
+          "editorMode": "code"
+        }
+      ],
+      "links": []
+    },
+    {
+      "type": "row",
+      "id": 30,
+      "title": "TRAFFIC TREND",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 31,
+      "title": "Concurrent Calls",
+      "description": "CC answered (emerald) and trying/ringing (amber), each with matching anomaly bands. Red fill on breach.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#36b37e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ffab00"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "U"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 20
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lower V"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#36b37e"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "V"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#36b37e"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "W"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 20
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lower X"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ffab00"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "X"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ffab00"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Upper U"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Answered"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "E"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Upper W"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "F"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Try & Ring"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "opensips_GL_cc_connected",
+          "legendFormat": "Answered",
+          "refId": "A",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "opensips_GL_cc_outbound - opensips_GL_cc_connected",
+          "legendFormat": "Try & Ring",
+          "refId": "B",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(anomaly:upper_band{anomaly_name=\"gl_cc_connected\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Upper U",
+          "refId": "U",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_cc_connected\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Lower V",
+          "refId": "V",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(anomaly:upper_band{anomaly_name=\"gl_cc_trying\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Upper W",
+          "refId": "W",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_cc_trying\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Lower X",
+          "refId": "X",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "opensips_GL_cc_connected > max(anomaly:upper_band{anomaly_name=\"gl_cc_connected\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Breach Hi C",
+          "refId": "C",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_cc_connected\", anomaly_strategy=\"adaptive\"}) and (opensips_GL_cc_connected < min(anomaly:lower_band{anomaly_name=\"gl_cc_connected\", anomaly_strategy=\"adaptive\"}))",
+          "legendFormat": "Breach Lo D",
+          "refId": "D",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "opensips_GL_cc_outbound - opensips_GL_cc_connected > max(anomaly:upper_band{anomaly_name=\"gl_cc_trying\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Breach Hi E",
+          "refId": "E",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_cc_trying\", anomaly_strategy=\"adaptive\"}) and (opensips_GL_cc_outbound - opensips_GL_cc_connected < min(anomaly:lower_band{anomaly_name=\"gl_cc_trying\", anomaly_strategy=\"adaptive\"}))",
+          "legendFormat": "Breach Lo F",
+          "refId": "F",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "id": 32,
+      "title": "Calls per Second",
+      "description": "CPS ingest (violet), answered (cyan), and GW attempts (amber), each with anomaly bands. Red fill on breach.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6554c0"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#00b8d9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ffab00"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "I"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 20
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lower J"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6554c0"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "J"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6554c0"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "K"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 20
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lower L"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#00b8d9"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "L"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#00b8d9"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "M"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 20
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lower N"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ffab00"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "N"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ffab00"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "O"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Upper I"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "P"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Ingest"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "Q"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Upper K"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "R"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Answered"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "S"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Upper M"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "T"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "GW Attempts"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m])",
+          "legendFormat": "Ingest",
+          "refId": "A",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_cdr_success{job=\"opensips\"}[2m])",
+          "legendFormat": "Answered",
+          "refId": "B",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_gwatt_real{job=\"opensips\"}[2m])",
+          "legendFormat": "GW Attempts",
+          "refId": "C",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(anomaly:upper_band{anomaly_name=\"gl_cps\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Upper I",
+          "refId": "I",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_cps\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Lower J",
+          "refId": "J",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(anomaly:upper_band{anomaly_name=\"gl_cps_answered\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Upper K",
+          "refId": "K",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_cps_answered\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Lower L",
+          "refId": "L",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(anomaly:upper_band{anomaly_name=\"gl_cps_gwatt\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Upper M",
+          "refId": "M",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_cps_gwatt\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Lower N",
+          "refId": "N",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m]) > max(anomaly:upper_band{anomaly_name=\"gl_cps\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Breach Hi O",
+          "refId": "O",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_cps\", anomaly_strategy=\"adaptive\"}) and (rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m]) < min(anomaly:lower_band{anomaly_name=\"gl_cps\", anomaly_strategy=\"adaptive\"}))",
+          "legendFormat": "Breach Lo P",
+          "refId": "P",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_cdr_success{job=\"opensips\"}[2m]) > max(anomaly:upper_band{anomaly_name=\"gl_cps_answered\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Breach Hi Q",
+          "refId": "Q",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_cps_answered\", anomaly_strategy=\"adaptive\"}) and (rate(opensips_GL_cdr_success{job=\"opensips\"}[2m]) < min(anomaly:lower_band{anomaly_name=\"gl_cps_answered\", anomaly_strategy=\"adaptive\"}))",
+          "legendFormat": "Breach Lo R",
+          "refId": "R",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_gwatt_real{job=\"opensips\"}[2m]) > max(anomaly:upper_band{anomaly_name=\"gl_cps_gwatt\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Breach Hi S",
+          "refId": "S",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_cps_gwatt\", anomaly_strategy=\"adaptive\"}) and (rate(opensips_GL_gwatt_real{job=\"opensips\"}[2m]) < min(anomaly:lower_band{anomaly_name=\"gl_cps_gwatt\", anomaly_strategy=\"adaptive\"}))",
+          "legendFormat": "Breach Lo T",
+          "refId": "T",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 33,
+      "title": "QUALITY TREND",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 34,
+      "title": "PDD",
+      "description": "Post Dial Delay (seconds) with anomaly band. Red fill on breach.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "s",
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ff8b00"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "U"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 20
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lower V"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ff8b00"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "V"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ff8b00"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "W"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Upper U"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "X"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "PDD (s)"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 29
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(opensips_GL_kpi_pdd_sum{job=\"opensips\"}[2m]) / clamp_min(rate(opensips_GL_kpi_pdd_count{job=\"opensips\"}[2m]), 0.001) / 1000",
+          "legendFormat": "PDD (s)",
+          "refId": "A",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(anomaly:upper_band{anomaly_name=\"gl_pdd\", anomaly_strategy=\"adaptive\"}) / 1000",
+          "legendFormat": "Upper U",
+          "refId": "U",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_pdd\", anomaly_strategy=\"adaptive\"}) / 1000",
+          "legendFormat": "Lower V",
+          "refId": "V",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "(rate(opensips_GL_kpi_pdd_sum{job=\"opensips\"}[5m]) / clamp_min(rate(opensips_GL_kpi_pdd_count{job=\"opensips\"}[5m]), 0.001)) / 1000 > max(anomaly:upper_band{anomaly_name=\"gl_pdd\", anomaly_strategy=\"adaptive\"}) / 1000",
+          "legendFormat": "Breach Hi W",
+          "refId": "W",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_pdd\", anomaly_strategy=\"adaptive\"}) / 1000 and ((rate(opensips_GL_kpi_pdd_sum{job=\"opensips\"}[5m]) / clamp_min(rate(opensips_GL_kpi_pdd_count{job=\"opensips\"}[5m]), 0.001)) / 1000 < min(anomaly:lower_band{anomaly_name=\"gl_pdd\", anomaly_strategy=\"adaptive\"}) / 1000)",
+          "legendFormat": "Breach Lo X",
+          "refId": "X",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "id": 35,
+      "title": "ASR & NER",
+      "description": "ASR (coral) and NER (blue) with matching anomaly bands. Red fill on breach.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            },
+            "axisSoftMin": 0,
+            "axisSoftMax": 100
+          },
+          "unit": "percent",
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ff5630"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#2684ff"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "U"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 20
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lower V"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ff5630"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "V"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ff5630"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "W"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 20
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lower X"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#2684ff"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "X"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#2684ff"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Upper U"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "ASR %"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "E"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Upper W"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "F"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "NER %"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 29
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "clamp(rate(opensips_GL_kpi_asr_ok{job=\"opensips\"}[2m]) / clamp_min(rate(opensips_GL_kpi_asr_total{job=\"opensips\"}[2m]), 0.001) * 100, 0, 100)",
+          "legendFormat": "ASR %",
+          "refId": "A",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "clamp((rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m]) - rate(opensips_GL_cdr_no_more_gws{job=\"opensips\"}[2m])) / clamp_min(rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m]), 0.001) * 100, 0, 100)",
+          "legendFormat": "NER %",
+          "refId": "B",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(anomaly:upper_band{anomaly_name=\"gl_asr\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Upper U",
+          "refId": "U",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_asr\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Lower V",
+          "refId": "V",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(anomaly:upper_band{anomaly_name=\"gl_ner\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Upper W",
+          "refId": "W",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_ner\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Lower X",
+          "refId": "X",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "clamp(rate(opensips_GL_kpi_asr_ok{job=\"opensips\"}[2m]) / clamp_min(rate(opensips_GL_kpi_asr_total{job=\"opensips\"}[2m]), 0.001) * 100, 0, 100) > max(anomaly:upper_band{anomaly_name=\"gl_asr\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Breach Hi C",
+          "refId": "C",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_asr\", anomaly_strategy=\"adaptive\"}) and (clamp(rate(opensips_GL_kpi_asr_ok{job=\"opensips\"}[2m]) / clamp_min(rate(opensips_GL_kpi_asr_total{job=\"opensips\"}[2m]), 0.001) * 100, 0, 100) < min(anomaly:lower_band{anomaly_name=\"gl_asr\", anomaly_strategy=\"adaptive\"}))",
+          "legendFormat": "Breach Lo D",
+          "refId": "D",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "clamp((rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m]) - rate(opensips_GL_cdr_no_more_gws{job=\"opensips\"}[2m])) / clamp_min(rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m]), 0.001) * 100, 0, 100) > max(anomaly:upper_band{anomaly_name=\"gl_ner\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Breach Hi E",
+          "refId": "E",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_ner\", anomaly_strategy=\"adaptive\"}) and (clamp((rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m]) - rate(opensips_GL_cdr_no_more_gws{job=\"opensips\"}[2m])) / clamp_min(rate(opensips_GL_funnel_ingested{job=\"opensips\"}[2m]), 0.001) * 100, 0, 100) < min(anomaly:lower_band{anomaly_name=\"gl_ner\", anomaly_strategy=\"adaptive\"}))",
+          "legendFormat": "Breach Lo F",
+          "refId": "F",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "id": 36,
+      "title": "MOS",
+      "description": "Mean Opinion Score with anomaly band. Red fill on breach.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            },
+            "axisSoftMin": 1,
+            "axisSoftMax": 5
+          },
+          "unit": "none",
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8777d9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "U"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 20
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lower V"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8777d9"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "V"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8777d9"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "W"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Upper U"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "X"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 40
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "MOS"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 29
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "avg(rate(rtpengine_mos_total{job=\"rtpengine\"}[2m]) / clamp_min(rate(rtpengine_mos_samples_total{job=\"rtpengine\"}[2m]), 0.001))",
+          "legendFormat": "MOS",
+          "refId": "A",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(anomaly:upper_band{anomaly_name=\"gl_mos\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Upper U",
+          "refId": "U",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_mos\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Lower V",
+          "refId": "V",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "avg(rate(rtpengine_mos_total{job=\"rtpengine\"}[2m]) / clamp_min(rate(rtpengine_mos_samples_total{job=\"rtpengine\"}[2m]), 0.001)) > max(anomaly:upper_band{anomaly_name=\"gl_mos\", anomaly_strategy=\"adaptive\"})",
+          "legendFormat": "Breach Hi W",
+          "refId": "W",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(anomaly:lower_band{anomaly_name=\"gl_mos\", anomaly_strategy=\"adaptive\"}) and (avg(rate(rtpengine_mos_total{job=\"rtpengine\"}[2m]) / clamp_min(rate(rtpengine_mos_samples_total{job=\"rtpengine\"}[2m]), 0.001)) < min(anomaly:lower_band{anomaly_name=\"gl_mos\", anomaly_strategy=\"adaptive\"}))",
+          "legendFormat": "Breach Lo X",
+          "refId": "X",
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 37,
+      "title": "PLATFORM ERRORS",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 38,
+      "title": "Errors per Second by Category",
+      "description": "Platform error rates aggregated by semantic group. Each event in opensips.cfg increments one short code; this panel sums them into 9 operational categories. Legend shows which codes belong to each category. Click to drill into dashboard 55 for per-code frequency bands and detail tables.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "none",
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Auth - Caller [credent_01/02]"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ff5630"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Auth - Carrier [401_INVITE]"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#de350b"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Routing [no_rule, no_dialp, no_gws, num_dom, provis_bug]"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ff8b00"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Capacity [cps_plat/callr, cc_plat/callr]"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ffab00"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Timeouts [timeout_01/02]"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6554c0"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "RTPEngine [rtpe_in/rs/canc/bye/seq/frout]"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#2684ff"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SIP state [481_*, loose_route, reinvite, invite_ended, bye_wrong, canc_trx, prack_kill, create_dlg]"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#00b8d9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teardown [term_bye/canc/loc/reas/rs, rm_tobek, rs_tobek, rs_tocanc, rs_toend]"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#e774bb"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Body / SDP [mixed_*, strms_*, fix_nat_cont, subst, bad_rm/rs]"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#36b37e"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 38
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(label_replace({__name__=~\"opensips_GL_err__90_ERROR_credent_.+\",job=\"opensips\"}, \"metric\", \"$0\", \"__name__\", \".*\")[2m:]))",
+          "legendFormat": "Auth - Caller [credent_01/02]",
+          "refId": "A",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(label_replace({__name__=~\"opensips_GL_err__90_ERROR_401_.+\",job=\"opensips\"}, \"metric\", \"$0\", \"__name__\", \".*\")[2m:]))",
+          "legendFormat": "Auth - Carrier [401_INVITE]",
+          "refId": "B",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(label_replace({__name__=~\"opensips_GL_err__90_ERROR_(no_rule|no_dialp|no_gws|num_dom|provis_bug)_.+\",job=\"opensips\"}, \"metric\", \"$0\", \"__name__\", \".*\")[2m:]))",
+          "legendFormat": "Routing [no_rule, no_dialp, no_gws, num_dom, provis_bug]",
+          "refId": "C",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(label_replace({__name__=~\"opensips_GL_err__90_ERROR_(cps|cc)_(plat|callr)_.+\",job=\"opensips\"}, \"metric\", \"$0\", \"__name__\", \".*\")[2m:]))",
+          "legendFormat": "Capacity [cps_plat/callr, cc_plat/callr]",
+          "refId": "D",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(label_replace({__name__=~\"opensips_GL_err__90_ERROR_timeout_.+\",job=\"opensips\"}, \"metric\", \"$0\", \"__name__\", \".*\")[2m:]))",
+          "legendFormat": "Timeouts [timeout_01/02]",
+          "refId": "E",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(label_replace({__name__=~\"opensips_GL_err__90_ERROR_rtpe_.+\",job=\"opensips\"}, \"metric\", \"$0\", \"__name__\", \".*\")[2m:]))",
+          "legendFormat": "RTPEngine [rtpe_in/rs/canc/bye/seq/frout]",
+          "refId": "F",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(label_replace({__name__=~\"opensips_GL_err__90_ERROR_(481_.+|loose_route_.+|reinvite_.+|invite_ended_.+|bye_wrong_.+|canc_trx_.+|prack_kill_.+|create_dlg_.+)\",job=\"opensips\"}, \"metric\", \"$0\", \"__name__\", \".*\")[2m:]))",
+          "legendFormat": "SIP state [481_*, loose_route, reinvite, invite_ended, bye_wrong, canc_trx, prack_kill, create_dlg]",
+          "refId": "G",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(label_replace({__name__=~\"opensips_GL_err__90_ERROR_(term_.+|rs_to.+|rm_tobek_.+|rs_tobek_.+)\",job=\"opensips\"}, \"metric\", \"$0\", \"__name__\", \".*\")[2m:]))",
+          "legendFormat": "Teardown [term_bye/canc/loc/reas/rs, rm_tobek, rs_tobek, rs_tocanc, rs_toend]",
+          "refId": "H",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(label_replace({__name__=~\"opensips_GL_err__90_ERROR_(mixed_.+|strms_.+|fix_nat_.+|subst_.+|bad_rm_.+|bad_rs_.+)\",job=\"opensips\"}, \"metric\", \"$0\", \"__name__\", \".*\")[2m:]))",
+          "legendFormat": "Body / SDP [mixed_*, strms_*, fix_nat_cont, subst, bad_rm/rs]",
+          "refId": "I",
+          "editorMode": "code"
+        }
+      ],
+      "links": [
+        {
+          "title": "Drill: Platform Errors",
+          "url": "/d/prod-55-platform-errors-v1?${__url_time_range}",
+          "targetBlank": false
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": 39,
+      "title": "Top Error Codes",
+      "description": "Top 15 individual _90_ERROR_<code> counters by current 5m rate. Sortable. Click to drill into dashboard 55 for per-code frequency bands and detail tables.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rate (errs/s)"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Error code"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "credent_01": {
+                        "text": "Auth: caller's From-user does not match credential ($au != $fU)",
+                        "index": 0
+                      },
+                      "credent_02": {
+                        "text": "Auth: same as credent_01 (verbose log line, fires together)",
+                        "index": 1
+                      },
+                      "401_INVITE_01": {
+                        "text": "Carrier auth: 401 to outbound INVITE (digest challenge -- expected IP auth)",
+                        "index": 2
+                      },
+                      "no_rule_01": {
+                        "text": "Routing: no drouting rule matched",
+                        "index": 3
+                      },
+                      "no_dialp_01": {
+                        "text": "Routing: no dialplan match",
+                        "index": 4
+                      },
+                      "no_gws_01": {
+                        "text": "Routing: all gateways exhausted (no_more_gws)",
+                        "index": 5
+                      },
+                      "num_dom_01": {
+                        "text": "Routing: numeric From-domain (expected FQDN)",
+                        "index": 6
+                      },
+                      "provis_bug_01": {
+                        "text": "Routing: provisioning bug -- legacy code path that should not fire",
+                        "index": 7
+                      },
+                      "cps_plat_01": {
+                        "text": "Capacity: pre-auth platform CPS gate (ratelimit, 2010 cps)",
+                        "index": 8
+                      },
+                      "cps_callr_01": {
+                        "text": "Capacity: pre-auth per-caller CPS gate ($fU, 500 cps)",
+                        "index": 9
+                      },
+                      "cps_plat_02": {
+                        "text": "Capacity: post-auth platform CPS gate (1100 cps hard limit)",
+                        "index": 10
+                      },
+                      "cps_callr_02": {
+                        "text": "Capacity: post-auth per-caller CPS gate (per-customer config)",
+                        "index": 11
+                      },
+                      "cc_plat_02": {
+                        "text": "Capacity: platform concurrent calls limit (16000 hard limit)",
+                        "index": 12
+                      },
+                      "cc_callr_02": {
+                        "text": "Capacity: per-caller concurrent calls limit (per-customer config)",
+                        "index": 13
+                      },
+                      "timeout_01": {
+                        "text": "Timeout: TM fr_inv_timeout (60s) -- downstream did not reply",
+                        "index": 14
+                      },
+                      "timeout_02": {
+                        "text": "Timeout: same as timeout_01 (deferred path, mute)",
+                        "index": 15
+                      },
+                      "rtpe_in_01": {
+                        "text": "RTPEngine: offer failed (incoming INVITE)",
+                        "index": 16
+                      },
+                      "rtpe_rs_01": {
+                        "text": "RTPEngine: answer failed (200 OK reply)",
+                        "index": 17
+                      },
+                      "rtpe_canc_01": {
+                        "text": "RTPEngine: release failed (CANCEL)",
+                        "index": 18
+                      },
+                      "rtpe_bye_01": {
+                        "text": "RTPEngine: release failed (BYE)",
+                        "index": 19
+                      },
+                      "rtpe_seq_01": {
+                        "text": "RTPEngine: offer/answer failed (sequential request)",
+                        "index": 20
+                      },
+                      "rtpe_frout_03": {
+                        "text": "RTPEngine: offer failed (failure_route mid-route)",
+                        "index": 21
+                      },
+                      "481_INVITE_01": {
+                        "text": "SIP state: 481 to INVITE -- TM transaction not found",
+                        "index": 22
+                      },
+                      "481_BYE_01": {
+                        "text": "SIP state: 481 to BYE -- TM transaction not found",
+                        "index": 23
+                      },
+                      "481_OPTIONS_01": {
+                        "text": "SIP state: 481 to OPTIONS -- TM transaction not found",
+                        "index": 24
+                      },
+                      "481_CANCEL_01": {
+                        "text": "SIP state: 481 to CANCEL -- TM transaction not found",
+                        "index": 25
+                      },
+                      "481_ACK_01": {
+                        "text": "SIP state: 481 to ACK -- TM transaction not found",
+                        "index": 26
+                      },
+                      "loose_route_01": {
+                        "text": "SIP state: loose_route() failed on sequential request -> 404",
+                        "index": 27
+                      },
+                      "reinvite_01": {
+                        "text": "SIP state: re-INVITE counted (informational, not a real error)",
+                        "index": 28
+                      },
+                      "invite_ended_01": {
+                        "text": "SIP state: INVITE arrived for an already-ended dialog",
+                        "index": 29
+                      },
+                      "bye_wrong_01": {
+                        "text": "SIP state: BYE arrived for unknown dialog / Call-ID",
+                        "index": 30
+                      },
+                      "canc_trx_01": {
+                        "text": "SIP state: CANCEL arrived with no matching transaction",
+                        "index": 31
+                      },
+                      "prack_kill_01": {
+                        "text": "SIP state: PRACK race -- non-200 to PRACK, dialog killed",
+                        "index": 32
+                      },
+                      "create_dlg_01": {
+                        "text": "SIP state: create_dialog() failed (server internal error 500)",
+                        "index": 33
+                      },
+                      "term_bye_01": {
+                        "text": "Teardown: anomalous BYE during teardown",
+                        "index": 34
+                      },
+                      "term_canc_01": {
+                        "text": "Teardown: anomalous CANCEL during teardown",
+                        "index": 35
+                      },
+                      "term_loc_01": {
+                        "text": "Teardown: local TM-generated 408 termination",
+                        "index": 36
+                      },
+                      "term_reas_01": {
+                        "text": "Teardown: initial BYE/CANCEL with anomalous DLG_end_reason",
+                        "index": 37
+                      },
+                      "term_rs_01": {
+                        "text": "Teardown: anomalous reply during teardown (failure_route)",
+                        "index": 38
+                      },
+                      "term_rs_02": {
+                        "text": "Teardown: anomalous reply during teardown (onreply re-INVITE)",
+                        "index": 39
+                      },
+                      "rm_tobek_01": {
+                        "text": "Teardown: sequential request after TO_BE_KILLED set",
+                        "index": 40
+                      },
+                      "rs_tobek_01": {
+                        "text": "Teardown: reply arrived after TO_BE_KILLED set",
+                        "index": 41
+                      },
+                      "rs_tocanc_01": {
+                        "text": "Teardown: reply for cancelled txn (failure_route)",
+                        "index": 42
+                      },
+                      "rs_tocanc_02": {
+                        "text": "Teardown: 200 OK for cancelled dialog (late branch race)",
+                        "index": 43
+                      },
+                      "rs_toend_01": {
+                        "text": "Teardown: reply for ended dialog (failure_route)",
+                        "index": 44
+                      },
+                      "rs_toend_02": {
+                        "text": "Teardown: 200 OK for ended dialog (late branch race)",
+                        "index": 45
+                      },
+                      "mixed_01": {
+                        "text": "Body/SDP: multipart/mixed body in sequential req",
+                        "index": 46
+                      },
+                      "mixed_02": {
+                        "text": "Body/SDP: multipart/mixed in seq req, no SDP after strip",
+                        "index": 47
+                      },
+                      "mixed_03": {
+                        "text": "Body/SDP: multipart/mixed body in failure_route",
+                        "index": 48
+                      },
+                      "mixed_04": {
+                        "text": "Body/SDP: multipart/mixed in failure_route, no SDP after strip",
+                        "index": 49
+                      },
+                      "mixed_brn_01": {
+                        "text": "Body/SDP: multipart/mixed in branch_route",
+                        "index": 50
+                      },
+                      "mixed_brn_02": {
+                        "text": "Body/SDP: multipart/mixed in branch_route, no SDP after strip",
+                        "index": 51
+                      },
+                      "mixed_rs_01": {
+                        "text": "Body/SDP: multipart/mixed in onreply",
+                        "index": 52
+                      },
+                      "mixed_rs_02": {
+                        "text": "Body/SDP: multipart/mixed in onreply, no SDP after strip",
+                        "index": 53
+                      },
+                      "strms_seq_01": {
+                        "text": "Body/SDP: multi-stream SDP in sequential req",
+                        "index": 54
+                      },
+                      "strms_rs_01": {
+                        "text": "Body/SDP: multi-stream SDP in reply",
+                        "index": 55
+                      },
+                      "fix_nat_cont_01": {
+                        "text": "Body/SDP: fix_nat_contact() failed",
+                        "index": 56
+                      },
+                      "subst_01": {
+                        "text": "Body/SDP: subst_uri() / subst_user() failed",
+                        "index": 57
+                      },
+                      "bad_rm_01": {
+                        "text": "Body/SDP: malformed request (sipmsg_validate, dead code)",
+                        "index": 58
+                      },
+                      "bad_rm_03": {
+                        "text": "Body/SDP: malformed request alt path (dead code)",
+                        "index": 59
+                      },
+                      "bad_rs_01": {
+                        "text": "Body/SDP: malformed reply (sipmsg_validate, dead code)",
+                        "index": 60
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^401_([A-Z]+)_[0-9]+$",
+                      "result": {
+                        "text": "Carrier auth: 401 to $1 (digest challenge)"
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^481_([A-Z]+)_[0-9]+$",
+                      "result": {
+                        "text": "SIP state: 481 to $1 (TM transaction not found)"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 38
+      },
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "topk(15, sum by (code)(rate(label_replace({__name__=~\"opensips_GL_err__90_ERROR_.+\",job=\"opensips\"}, \"code\", \"$1\", \"__name__\", \"opensips_GL_err__90_ERROR_(.+)\")[5m:])))",
+          "legendFormat": "{{code}}",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true,
+              "app": true
+            },
+            "renameByName": {
+              "code": "Error code",
+              "Value": "Rate (errs/s)"
+            },
+            "indexByName": {
+              "Error code": 0,
+              "Rate (errs/s)": 1
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Rate (errs/s)",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "links": [
+        {
+          "title": "Drill: Platform Errors",
+          "url": "/d/prod-55-platform-errors-v1?${__url_time_range}",
+          "targetBlank": false
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "prod"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "50. Main",
+  "uid": "prod-50-main-v1",
+  "version": 0
+}

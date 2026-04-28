@@ -1,0 +1,283 @@
+# Adaptive anomaly detection rules.
+#
+# For each series matching {anomaly_name!="", anomaly_select=""}:
+#   avg_short  = avg_over_time(live[6m])
+#   drift      = d7(t) - d7(t-6m), fallback d6 -> d8 -> d1, clamped to +/-1.5*spread
+#   baseline   = avg_short + drift
+#   spread     = max(stddev_smooth, seasonal_std, 0.05*baseline, abs_floor),
+#                floored by 0.5 * max_over_time(spread_raw[6m])
+#   upper_band = baseline + 2*spread
+#   lower_band = max(0, baseline - 2*spread)
+#
+# Candidate offsets: d1=23h30m, d6=143h30m, d7=167h30m, d8=191h30m, 30m window.
+# Output label: anomaly_strategy="adaptive".
+
+groups:
+  - name: AnomalyAdaptiveCore
+    rules:
+
+      # Constants
+      - record: anomaly:adaptive:stddev_multiplier
+        expr: "2"
+
+      - record: anomaly:adaptive:margin_floor
+        expr: "0.05"
+
+      - record: anomaly:adaptive:static_floor
+        expr: "0.5"
+
+      # Select: pass-through of all inputs tagged anomaly_select=""
+      - record: anomaly:adaptive:select
+        expr: |-
+          {anomaly_name!="", anomaly_select=""}
+        labels:
+          anomaly_select: "1"
+          anomaly_strategy: adaptive
+
+      # Short rolling mean of the live signal
+      - record: anomaly:adaptive:avg_short
+        expr: |-
+          avg_over_time(anomaly:adaptive:select[6m])
+
+      # Live spread: 6m stddev smoothed over 6h
+      - record: anomaly:adaptive:stddev_1h
+        expr: |-
+          stddev_over_time(anomaly:adaptive:select[6m])
+
+      - record: anomaly:adaptive:stddev_smooth
+        expr: |-
+          avg_over_time(anomaly:adaptive:stddev_1h[6h])
+
+      # Level: the metric compared against bands
+      - record: anomaly:level
+        expr: |-
+          anomaly:adaptive:select
+
+  # Seasonal candidates d1, d6, d7, d8 -- 30m window at each offset.
+  # Runs at 5m cadence to share cost with the 24h quantile below.
+  - name: AnomalyAdaptiveSeasonal
+    interval: 5m
+    rules:
+
+      # 24h p95 of the input, used to size the scale-aware spread floor.
+      - record: anomaly:adaptive:p95_24h
+        expr: |-
+          quantile_over_time(0.95,
+            {anomaly_name!="", anomaly_select=""}[24h])
+        labels:
+          anomaly_select: "1"
+          anomaly_strategy: adaptive
+
+      # d1 -- yesterday
+      - record: anomaly:adaptive:seasonal_candidate_avg
+        expr: |-
+          avg_over_time({anomaly_name!="", anomaly_select=""}[30m] offset 23h30m)
+        labels:
+          candidate: "d1"
+          anomaly_select: "1"
+          anomaly_strategy: adaptive
+
+      - record: anomaly:adaptive:seasonal_candidate_std
+        expr: |-
+          stddev_over_time({anomaly_name!="", anomaly_select=""}[30m] offset 23h30m)
+        labels:
+          candidate: "d1"
+          anomaly_select: "1"
+          anomaly_strategy: adaptive
+
+      # d6
+      - record: anomaly:adaptive:seasonal_candidate_avg
+        expr: |-
+          avg_over_time({anomaly_name!="", anomaly_select=""}[30m] offset 143h30m)
+        labels:
+          candidate: "d6"
+          anomaly_select: "1"
+          anomaly_strategy: adaptive
+
+      - record: anomaly:adaptive:seasonal_candidate_std
+        expr: |-
+          stddev_over_time({anomaly_name!="", anomaly_select=""}[30m] offset 143h30m)
+        labels:
+          candidate: "d6"
+          anomaly_select: "1"
+          anomaly_strategy: adaptive
+
+      # d7 -- same weekday last week
+      - record: anomaly:adaptive:seasonal_candidate_avg
+        expr: |-
+          avg_over_time({anomaly_name!="", anomaly_select=""}[30m] offset 167h30m)
+        labels:
+          candidate: "d7"
+          anomaly_select: "1"
+          anomaly_strategy: adaptive
+
+      - record: anomaly:adaptive:seasonal_candidate_std
+        expr: |-
+          stddev_over_time({anomaly_name!="", anomaly_select=""}[30m] offset 167h30m)
+        labels:
+          candidate: "d7"
+          anomaly_select: "1"
+          anomaly_strategy: adaptive
+
+      # d8
+      - record: anomaly:adaptive:seasonal_candidate_avg
+        expr: |-
+          avg_over_time({anomaly_name!="", anomaly_select=""}[30m] offset 191h30m)
+        labels:
+          candidate: "d8"
+          anomaly_select: "1"
+          anomaly_strategy: adaptive
+
+      - record: anomaly:adaptive:seasonal_candidate_std
+        expr: |-
+          stddev_over_time({anomaly_name!="", anomaly_select=""}[30m] offset 191h30m)
+        labels:
+          candidate: "d8"
+          anomaly_select: "1"
+          anomaly_strategy: adaptive
+
+      # Per-candidate self-weight. Closer candidates get more weight.
+      - record: anomaly:adaptive:seasonal_candidate_weight
+        expr: |-
+          1 / (
+            1 + abs(
+              anomaly:adaptive:seasonal_candidate_avg
+              - ignoring(candidate) group_left anomaly:adaptive:avg_short
+            )
+          ) ^ 2
+
+      # Weighted seasonal std feeds spread.
+      - record: anomaly:adaptive:seasonal_candidate_weighted_std
+        expr: |-
+          anomaly:adaptive:seasonal_candidate_std
+          * anomaly:adaptive:seasonal_candidate_weight
+
+      - record: anomaly:adaptive:seasonal_std
+        expr: |-
+          sum without(candidate) (anomaly:adaptive:seasonal_candidate_weighted_std)
+          /
+          sum without(candidate) (anomaly:adaptive:seasonal_candidate_weight)
+
+  - name: AnomalyAdaptiveBands
+    rules:
+
+      # Drift: d7(t) - d7(t-6m), with fallback to d6 / d8 / d1 if d7 has no data.
+      - record: anomaly:adaptive:drift_raw
+        expr: |-
+          sum without(candidate) (
+            (
+              anomaly:adaptive:seasonal_candidate_avg{candidate="d7"}
+              - anomaly:adaptive:seasonal_candidate_avg{candidate="d7"} offset 6m
+            )
+            or
+            (
+              anomaly:adaptive:seasonal_candidate_avg{candidate="d6"}
+              - anomaly:adaptive:seasonal_candidate_avg{candidate="d6"} offset 6m
+            )
+            or
+            (
+              anomaly:adaptive:seasonal_candidate_avg{candidate="d8"}
+              - anomaly:adaptive:seasonal_candidate_avg{candidate="d8"} offset 6m
+            )
+            or
+            (
+              anomaly:adaptive:seasonal_candidate_avg{candidate="d1"}
+              - anomaly:adaptive:seasonal_candidate_avg{candidate="d1"} offset 6m
+            )
+          )
+
+      # Clamp drift to +/- 1.5 * spread_raw.
+      - record: anomaly:adaptive:drift
+        expr: |-
+          (
+            anomaly:adaptive:drift_raw
+            and (anomaly:adaptive:drift_raw <= 1.5 * anomaly:adaptive:spread_raw)
+            and (anomaly:adaptive:drift_raw >= -1.5 * anomaly:adaptive:spread_raw)
+          )
+          or
+          (
+            1.5 * anomaly:adaptive:spread_raw
+            and (anomaly:adaptive:drift_raw > 1.5 * anomaly:adaptive:spread_raw)
+          )
+          or
+          (
+            -1.5 * anomaly:adaptive:spread_raw
+            and (anomaly:adaptive:drift_raw < -1.5 * anomaly:adaptive:spread_raw)
+          )
+
+      - record: anomaly:adaptive:baseline
+        expr: |-
+          anomaly:adaptive:avg_short + anomaly:adaptive:drift
+          or
+          anomaly:adaptive:avg_short
+
+      # Scale-aware absolute floor = min(static_floor, margin * p95_24h).
+      # PromQL min of two series: (a+b - |a-b|) / 2
+      - record: anomaly:adaptive:abs_floor
+        expr: |-
+          (
+            anomaly:adaptive:static_floor
+            + anomaly:adaptive:margin_floor * anomaly:adaptive:p95_24h
+            - abs(
+                anomaly:adaptive:static_floor
+                - anomaly:adaptive:margin_floor * anomaly:adaptive:p95_24h
+              )
+          ) / 2
+          or
+          anomaly:adaptive:static_floor
+
+      - record: anomaly:adaptive:spread_raw
+        expr: |-
+          max without(__tmp) (
+            label_replace(
+              last_over_time(anomaly:adaptive:stddev_smooth[2m]),
+              "__tmp", "live", "", ""
+            )
+            or
+            label_replace(
+              last_over_time(anomaly:adaptive:seasonal_std[10m]),
+              "__tmp", "seasonal", "", ""
+            )
+            or
+            label_replace(
+              last_over_time(anomaly:adaptive:baseline[2m])
+                * on() group_left anomaly:adaptive:margin_floor,
+              "__tmp", "margin", "", ""
+            )
+            or
+            label_replace(
+              last_over_time(anomaly:adaptive:abs_floor[10m]),
+              "__tmp", "abs", "", ""
+            )
+          )
+
+      # Short-tail decay floor on spread so a collapsed seasonal_std cannot
+      # narrow the band by more than 50% within 6 minutes.
+      - record: anomaly:adaptive:spread
+        expr: |-
+          max without(__tmp) (
+            label_replace(anomaly:adaptive:spread_raw,
+              "__tmp", "now", "", "")
+            or
+            label_replace(max_over_time(anomaly:adaptive:spread_raw[6m]) * 0.5,
+              "__tmp", "decay", "", "")
+          )
+
+      - record: anomaly:upper_band
+        expr: |-
+          anomaly:adaptive:baseline
+          + anomaly:adaptive:spread
+            * on() group_left anomaly:adaptive:stddev_multiplier
+        labels:
+          anomaly_strategy: adaptive
+
+      - record: anomaly:lower_band
+        expr: |-
+          clamp_min(
+            anomaly:adaptive:baseline
+            - anomaly:adaptive:spread
+              * on() group_left anomaly:adaptive:stddev_multiplier,
+            0
+          )
+        labels:
+          anomaly_strategy: adaptive

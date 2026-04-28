@@ -1,0 +1,421 @@
+# Platform-wide (GL) band-breach alerts.
+#
+# Fires when a metric breaches its adaptive band by >= 10% of band
+# width for 3 minutes, while the platform is busy (cc_outbound peaked
+# > 100 in the last 15m).
+#
+# Direction per metric:
+#   MOS, NER, ASR  -- lower breach only
+#   PDD            -- upper breach only
+#   CPS, CC        -- both sides
+
+apiVersion: 1
+groups:
+
+  - orgId: 1
+    name: GL_Quality
+    folder: SIDIAL
+    interval: 1m
+    rules:
+
+      - uid: gl-mos-degraded
+        title: MOSDegraded
+        condition: C
+        noDataState: OK
+        execErrState: Alerting
+        for: 3m
+        isPaused: false
+        labels:
+          severity: warning
+          scope: gl
+          anomaly_name: gl_mos
+        annotations:
+          summary: "Platform MOS below adaptive lower band"
+          description: "Global MOS below lower adaptive band by >=10% of band width for >=3m, while platform was carrying >100 concurrent calls. Check RTPEngine instances, per-gateway MOS, recent carrier changes."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: ff0jhwc3z0sn4e
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: |
+                sum(
+                  anomaly:level_2m{anomaly_name="gl_mos"}
+                    < bool (
+                        anomaly:lower_band{anomaly_name="gl_mos", anomaly_strategy="adaptive"}
+                        - 0.10 * (
+                            anomaly:upper_band{anomaly_name="gl_mos", anomaly_strategy="adaptive"}
+                            - anomaly:lower_band{anomaly_name="gl_mos", anomaly_strategy="adaptive"}
+                          )
+                      )
+                )
+                *
+                sum(max_over_time(opensips_GL_cc_outbound[15m]) > bool 100)
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource: { type: __expr__, uid: "-100" }
+              conditions: []
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource: { type: __expr__, uid: "-100" }
+              conditions:
+                - type: query
+                  evaluator: { type: gt, params: [0] }
+                  operator: { type: and }
+                  query: { params: [B] }
+                  reducer: { type: last, params: [] }
+
+      - uid: gl-ner-degraded
+        title: NERDegraded
+        condition: C
+        noDataState: OK
+        execErrState: Alerting
+        for: 3m
+        isPaused: false
+        labels:
+          severity: warning
+          scope: gl
+          anomaly_name: gl_ner
+        annotations:
+          summary: "Platform NER below adaptive lower band"
+          description: "Global NER below lower adaptive band by >=10% of band width for >=3m. More calls being rejected by carriers than usual. Check 5xx / 4xx rates per gateway."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: ff0jhwc3z0sn4e
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: |
+                sum(
+                  anomaly:level_2m{anomaly_name="gl_ner"}
+                    < bool (
+                        anomaly:lower_band{anomaly_name="gl_ner", anomaly_strategy="adaptive"}
+                        - 0.10 * (
+                            anomaly:upper_band{anomaly_name="gl_ner", anomaly_strategy="adaptive"}
+                            - anomaly:lower_band{anomaly_name="gl_ner", anomaly_strategy="adaptive"}
+                          )
+                      )
+                )
+                *
+                sum(max_over_time(opensips_GL_cc_outbound[15m]) > bool 100)
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource: { type: __expr__, uid: "-100" }
+              conditions: []
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource: { type: __expr__, uid: "-100" }
+              conditions:
+                - type: query
+                  evaluator: { type: gt, params: [0] }
+                  operator: { type: and }
+                  query: { params: [B] }
+                  reducer: { type: last, params: [] }
+
+      - uid: gl-asr-degraded
+        title: ASRDegraded
+        condition: C
+        noDataState: OK
+        execErrState: Alerting
+        for: 3m
+        isPaused: false
+        labels:
+          severity: warning
+          scope: gl
+          anomaly_name: gl_asr
+        annotations:
+          summary: "Platform ASR below adaptive lower band"
+          description: "Global ASR below lower adaptive band by >=10% of band width for >=3m while traffic was non-trivial. Customer impact likely. Drill into 51_GATEWAYS and 52_CUSTOMERS for the offending entity."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: ff0jhwc3z0sn4e
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: |
+                sum(
+                  anomaly:level_2m{anomaly_name="gl_asr"}
+                    < bool (
+                        anomaly:lower_band{anomaly_name="gl_asr", anomaly_strategy="adaptive"}
+                        - 0.10 * (
+                            anomaly:upper_band{anomaly_name="gl_asr", anomaly_strategy="adaptive"}
+                            - anomaly:lower_band{anomaly_name="gl_asr", anomaly_strategy="adaptive"}
+                          )
+                      )
+                )
+                *
+                sum(max_over_time(opensips_GL_cc_outbound[15m]) > bool 100)
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource: { type: __expr__, uid: "-100" }
+              conditions: []
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource: { type: __expr__, uid: "-100" }
+              conditions:
+                - type: query
+                  evaluator: { type: gt, params: [0] }
+                  operator: { type: and }
+                  query: { params: [B] }
+                  reducer: { type: last, params: [] }
+
+  - orgId: 1
+    name: GL_Latency
+    folder: SIDIAL
+    interval: 1m
+    rules:
+
+      - uid: gl-pdd-drifting
+        title: PDDDrifting
+        condition: C
+        noDataState: OK
+        execErrState: Alerting
+        for: 3m
+        isPaused: false
+        labels:
+          severity: warning
+          scope: gl
+          anomaly_name: gl_pdd
+        annotations:
+          summary: "Platform PDD above adaptive upper band"
+          description: "Global post-dial delay above upper adaptive band by >=10% of band width for >=3m. Users hearing longer ring delays. Check carrier response times and routing decisions."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: ff0jhwc3z0sn4e
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: |
+                sum(
+                  anomaly:level_2m{anomaly_name="gl_pdd"}
+                    > bool (
+                        anomaly:upper_band{anomaly_name="gl_pdd", anomaly_strategy="adaptive"}
+                        + 0.10 * (
+                            anomaly:upper_band{anomaly_name="gl_pdd", anomaly_strategy="adaptive"}
+                            - anomaly:lower_band{anomaly_name="gl_pdd", anomaly_strategy="adaptive"}
+                          )
+                      )
+                )
+                *
+                sum(max_over_time(opensips_GL_cc_outbound[15m]) > bool 100)
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource: { type: __expr__, uid: "-100" }
+              conditions: []
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource: { type: __expr__, uid: "-100" }
+              conditions:
+                - type: query
+                  evaluator: { type: gt, params: [0] }
+                  operator: { type: and }
+                  query: { params: [B] }
+                  reducer: { type: last, params: [] }
+
+  - orgId: 1
+    name: GL_Traffic
+    folder: SIDIAL
+    interval: 1m
+    rules:
+
+      - uid: gl-cps-anomaly
+        title: CPSAnomaly
+        condition: C
+        noDataState: OK
+        execErrState: Alerting
+        for: 3m
+        isPaused: false
+        labels:
+          severity: critical    # CPS anomaly = outage signal; pages immediately, repeats hourly via nested policy in policies.yaml
+          scope: gl
+          anomaly_name: gl_cps
+        annotations:
+          summary: "Platform CPS outside adaptive band (drop or spike)"
+          description: "Global calls-per-second outside adaptive band by >=10% of band width for >=3m. Drop = possible outage / carrier block; spike = possible flood / abuse. Recent 15m peaked at >100 concurrent."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: ff0jhwc3z0sn4e
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: |
+                sum(
+                  (anomaly:level_2m{anomaly_name="gl_cps"}
+                    < bool (
+                        anomaly:lower_band{anomaly_name="gl_cps", anomaly_strategy="adaptive"}
+                        - 0.10 * (
+                            anomaly:upper_band{anomaly_name="gl_cps", anomaly_strategy="adaptive"}
+                            - anomaly:lower_band{anomaly_name="gl_cps", anomaly_strategy="adaptive"}
+                          )
+                      ))
+                  +
+                  (anomaly:level_2m{anomaly_name="gl_cps"}
+                    > bool (
+                        anomaly:upper_band{anomaly_name="gl_cps", anomaly_strategy="adaptive"}
+                        + 0.10 * (
+                            anomaly:upper_band{anomaly_name="gl_cps", anomaly_strategy="adaptive"}
+                            - anomaly:lower_band{anomaly_name="gl_cps", anomaly_strategy="adaptive"}
+                          )
+                      ))
+                )
+                *
+                sum(max_over_time(opensips_GL_cc_outbound[15m]) > bool 100)
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource: { type: __expr__, uid: "-100" }
+              conditions: []
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource: { type: __expr__, uid: "-100" }
+              conditions:
+                - type: query
+                  evaluator: { type: gt, params: [0] }
+                  operator: { type: and }
+                  query: { params: [B] }
+                  reducer: { type: last, params: [] }
+
+      - uid: gl-cc-anomaly
+        title: CCAnomaly
+        condition: C
+        noDataState: OK
+        execErrState: Alerting
+        for: 3m
+        isPaused: false
+        labels:
+          severity: warning
+          scope: gl
+          anomaly_name: gl_cc_connected
+        annotations:
+          summary: "Platform CC connected outside adaptive band (drop or spike)"
+          description: "Global concurrent connected calls outside adaptive band by >=10% of band width for >=3m. Drop = disconnect storm / carrier failure; spike = routing loop or ACD collapse lengthening calls."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: ff0jhwc3z0sn4e
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: |
+                sum(
+                  (anomaly:level{anomaly_name="gl_cc_connected"}
+                    < bool (
+                        anomaly:lower_band{anomaly_name="gl_cc_connected", anomaly_strategy="adaptive"}
+                        - 0.10 * (
+                            anomaly:upper_band{anomaly_name="gl_cc_connected", anomaly_strategy="adaptive"}
+                            - anomaly:lower_band{anomaly_name="gl_cc_connected", anomaly_strategy="adaptive"}
+                          )
+                      ))
+                  +
+                  (anomaly:level{anomaly_name="gl_cc_connected"}
+                    > bool (
+                        anomaly:upper_band{anomaly_name="gl_cc_connected", anomaly_strategy="adaptive"}
+                        + 0.10 * (
+                            anomaly:upper_band{anomaly_name="gl_cc_connected", anomaly_strategy="adaptive"}
+                            - anomaly:lower_band{anomaly_name="gl_cc_connected", anomaly_strategy="adaptive"}
+                          )
+                      ))
+                )
+                *
+                sum(max_over_time(opensips_GL_cc_outbound[15m]) > bool 100)
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource: { type: __expr__, uid: "-100" }
+              conditions: []
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "-100"
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource: { type: __expr__, uid: "-100" }
+              conditions:
+                - type: query
+                  evaluator: { type: gt, params: [0] }
+                  operator: { type: and }
+                  query: { params: [B] }
+                  reducer: { type: last, params: [] }
